@@ -1,6 +1,6 @@
 
     // 事件 1: 點擊頁面超連結會變色
-        document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
         // 取得所有超連結
         const menuItems = document.querySelectorAll('nav ul li a');
 
@@ -63,7 +63,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
     let countdown = 20;
     let gameStarted = false;
     let countdownInterval;
-    let canTurnGreen = true;
+    let canTurnGray = true;
+    let moveLeftInterval, moveRightInterval;
 
     function setCanvasSize() {
         canvas.width = Math.min(window.innerWidth, 1200); // 限制最大寬度為1200
@@ -73,7 +74,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     setCanvasSize();
     window.addEventListener('resize', setCanvasSize);
 
-    let player = { x: 50, y: canvas.height - 100, width: 50, height: 50, color: 'lightblue' };
+    let player = { x: 50, y: canvas.height - 150, width: 50, height: 50, color: 'lightblue' };
     let enemies = [];
     let keys = {};
 
@@ -90,12 +91,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
     startButton.addEventListener('click', () => {
         startButton.classList.add('hidden');
         canvas.classList.remove('hidden');
-        countdownElement.textContent = `倒計時: ${countdown}`;
+        countdownElement.textContent = `倒計時: ${countdown} 秒`;
         countdownInterval = setInterval(() => {
             countdown--;
-            countdownElement.textContent = `倒計時: ${countdown}`;
+            countdownElement.textContent = `倒計時: ${countdown} 秒`;
             if (countdown <= 0) {
                 clearInterval(countdownInterval);
+                countdownElement.textContent = `倒計時: 0 秒`;
                 if (gameStarted) {
                     alert('時間到！你贏了OuOb');
                 }
@@ -114,6 +116,54 @@ document.addEventListener('DOMContentLoaded', (event) => {
     window.addEventListener('keyup', (e) => {
         keys[e.key] = false;
     });
+
+    document.getElementById('leftButton').addEventListener('mousedown', () => {
+        moveLeftInterval = setInterval(moveLeft, 50);
+    });
+
+    document.getElementById('leftButton').addEventListener('mouseup', () => {
+        clearInterval(moveLeftInterval);
+    });
+
+    document.getElementById('leftButton').addEventListener('touchstart', () => {
+        moveLeftInterval = setInterval(moveLeft, 50);
+    });
+
+    document.getElementById('leftButton').addEventListener('touchend', () => {
+        clearInterval(moveLeftInterval);
+    });
+
+    document.getElementById('rightButton').addEventListener('mousedown', () => {
+        moveRightInterval = setInterval(moveRight, 50);
+    });
+
+    document.getElementById('rightButton').addEventListener('mouseup', () => {
+        clearInterval(moveRightInterval);
+    });
+
+    document.getElementById('rightButton').addEventListener('touchstart', () => {
+        moveRightInterval = setInterval(moveRight, 50);
+    });
+
+    document.getElementById('rightButton').addEventListener('touchend', () => {
+        clearInterval(moveRightInterval);
+    });
+
+    document.getElementById('invincibleButton').addEventListener('click', () => {
+        activateInvincibility();
+    });
+
+    function activateInvincibility() {
+        if (canTurnGreen) {
+            player.color = 'gray';
+            canTurnGreen = false;
+            document.getElementById('invincibleButton').classList.add('disabled');
+            setTimeout(() => {
+                player.color = 'lightblue';
+            }, 1000);
+        }
+    }
+    
 
     function createEnemies() {
         for (let i = 0; i < 5; i++) {
@@ -145,13 +195,17 @@ document.addEventListener('DOMContentLoaded', (event) => {
     function movePlayer() {
         if (keys['ArrowLeft'] && player.x > 0) player.x -= 5;
         if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += 5;
-        if (keys[' '] && canTurnGreen) {
-            player.color = 'green';
-            canTurnGreen = false;
-            setTimeout(() => {
-                player.color = 'lightblue';
-            }, 1000);
+        if (keys[' '] && canTurnGray) {
+            activateInvincibility();
         }
+    }
+    
+    function moveLeft() {
+        if (player.x > 0) player.x -= 17;
+    }
+
+    function moveRight() {
+        if (player.x < canvas.width - player.width) player.x += 17;
     }
 
     function drawPlayer() {
@@ -198,6 +252,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
         startButton.classList.remove('hidden');
         canvas.classList.add('hidden');
         clearInterval(countdownInterval);
-        countdownElement.textContent = `倒計時: 20`;
+        clearInterval(moveLeftInterval);
+        clearInterval(moveRightInterval);
+        keys = {}; // 清空按鍵狀態
+        isLongPress = false;
+        document.getElementById('invincibleButton').classList.remove('disabled'); // 恢复按钮颜色
+        countdownElement.textContent = `倒計時: 20 秒`;
     }
+    
 });
+
