@@ -1,19 +1,41 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // 事件 1: 菜單高亮
-    const currentLocation = location.href;
-    const menuItem = document.querySelectorAll('nav ul li a');
-    const menuLength = menuItem.length;
-    for (let i = 0; i < menuLength; i++) {
-        if (menuItem[i].href === currentLocation) {
-            menuItem[i].classList.add('active');
-        }
 
-        // 添加点击事件
-        menuItem[i].addEventListener('click', () => {
-            menuItem.forEach(item => item.classList.remove('read'));
-            menuItem[i].classList.add('read');
+    // 事件 1: 點擊頁面超連結會變色
+        document.addEventListener('DOMContentLoaded', () => {
+        // 取得所有超連結
+        const menuItems = document.querySelectorAll('nav ul li a');
+
+        // 當前頁面的 URL
+        const currentURL = window.location.href;
+
+        // 預設所有超連結為未點擊過的樣式
+        menuItems.forEach(item => {
+            item.classList.remove('read');
+            item.classList.add('unread');
         });
-    }
+
+        // 將當前頁面的超連結設置為已點擊過的樣式
+        menuItems.forEach(item => {
+            if (item.href === currentURL) {
+                item.classList.remove('unread');
+                item.classList.add('read');
+                // 記錄到 LocalStorage，標記為已點擊
+                localStorage.setItem(item.href, 'read');
+            }
+            
+            // 添加點擊事件處理
+            item.addEventListener('click', (event) => {
+                // 將超連結標記為已點擊
+                localStorage.setItem(item.href, 'read');
+                item.classList.remove('unread');
+                item.classList.add('read');
+            });
+        });
+    });
+
+
+
+
+
 
     // 事件 2: 圖片庫顯示並添加旋轉事件
     if (document.querySelector('.gallery')) {
@@ -32,92 +54,150 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 事件 3: 小遊戲
-    if (document.querySelector('#gameCanvas')) {
-        const canvas = document.getElementById('gameCanvas');
-        const context = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+// 事件 3: 小遊戲
+document.addEventListener('DOMContentLoaded', (event) => {
+    const startButton = document.getElementById('startButton');
+    const countdownElement = document.getElementById('countdown');
+    const canvas = document.getElementById('gameCanvas');
+    const context = canvas.getContext('2d');
+    let countdown = 20;
+    let gameStarted = false;
+    let countdownInterval;
+    let canTurnGreen = true;
 
-        let player = { x: 50, y: 50, width: 50, height: 50, color: 'blue' };
-        let enemies = [
-            { x: 300, y: 100, width: 50, height: 50, color: 'red' }
-        ];
-        let keys = {};
-        let gameStarted = false;
-        let startTime, currentTime;
+    function setCanvasSize() {
+        canvas.width = Math.min(window.innerWidth, 1200); // 限制最大寬度為1200
+        canvas.height = Math.min(window.innerHeight, 600); // 限制最大高度為600
+    }
 
-        window.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
-            if (!gameStarted) {
-                gameStarted = true;
-                startTime = new Date().getTime();
-                gameLoop();
-            }
-        });
+    setCanvasSize();
+    window.addEventListener('resize', setCanvasSize);
 
-        window.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
-        });
+    let player = { x: 50, y: canvas.height - 100, width: 50, height: 50, color: 'lightblue' };
+    let enemies = [];
+    let keys = {};
 
-        function gameLoop() {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            movePlayer();
-            drawPlayer();
-            drawEnemies();
-            checkCollisions();
-            currentTime = new Date().getTime();
-            if (currentTime - startTime < 15000) {
-                requestAnimationFrame(gameLoop);
-            } else {
-                alert('你贏了!');
+    const enemyImage = new Image();
+    enemyImage.src = 'taiwan_blue_magpie.png';
+
+    // Prevent arrow keys and space from scrolling the page
+    window.addEventListener('keydown', (e) => {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+
+    startButton.addEventListener('click', () => {
+        startButton.classList.add('hidden');
+        canvas.classList.remove('hidden');
+        countdownElement.textContent = `倒計時: ${countdown}`;
+        countdownInterval = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = `倒計時: ${countdown}`;
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                if (gameStarted) {
+                    alert('時間到！你贏了OuOb');
+                }
                 resetGame();
             }
-        }
+        }, 1000);
+        gameStarted = true;
+        createEnemies();
+        gameLoop();
+    });
 
-        function movePlayer() {
-            if (keys['ArrowUp'] && player.y > 0) player.y -= 5;
-            if (keys['ArrowDown'] && player.y < canvas.height - player.height) player.y += 5;
-            if (keys['ArrowLeft'] && player.x > 0) player.x -= 5;
-            if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += 5;
-            if (keys[' ']) player.color = 'green'; // 路人蹲下閃躲
-            else player.color = 'blue';
-        }
+    window.addEventListener('keydown', (e) => {
+        keys[e.key] = true;
+    });
 
-        function drawPlayer() {
-            context.fillStyle = player.color;
-            context.fillRect(player.x, player.y, player.width, player.height);
-        }
+    window.addEventListener('keyup', (e) => {
+        keys[e.key] = false;
+    });
 
-        function drawEnemies() {
-            enemies.forEach(enemy => {
-                context.fillStyle = enemy.color;
-                context.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-                enemy.y += 3; // 敵人向下移動
-                if (enemy.y > canvas.height) {
-                    enemy.y = 0;
-                    enemy.x = Math.random() * canvas.width;
-                }
-            });
+    function createEnemies() {
+        for (let i = 0; i < 5; i++) {
+            let enemy = {
+                x: Math.random() * canvas.width,
+                y: -50,
+                width: 50,
+                height: 50,
+                speedY: 3 + Math.random() * 3,
+                speedX: Math.random() > 0.5 ? (1 + Math.random() * 2) : -(1 + Math.random() * 2)
+            };
+            enemies.push(enemy);
         }
+    }
 
-        function checkCollisions() {
-            enemies.forEach(enemy => {
-                if (player.color === 'blue' && 
-                    player.x < enemy.x + enemy.width &&
-                    player.x + player.width > enemy.x &&
-                    player.y < enemy.y + enemy.height &&
-                    player.y + player.height > enemy.y) {
-                        alert('你被攻擊了!');
-                        resetGame();
-                }
-            });
+    function gameLoop() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        movePlayer();
+        drawPlayer();
+        drawEnemies();
+        checkCollisions();
+        if (gameStarted && countdown > 0) {
+            requestAnimationFrame(gameLoop);
+        } else if (countdown > 0) {
+            resetGame();
         }
+    }
 
-        function resetGame() {
-            player.x = 50;
-            player.y = 50;
-            gameStarted = false;
+    function movePlayer() {
+        if (keys['ArrowLeft'] && player.x > 0) player.x -= 5;
+        if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += 5;
+        if (keys[' '] && canTurnGreen) {
+            player.color = 'green';
+            canTurnGreen = false;
+            setTimeout(() => {
+                player.color = 'lightblue';
+            }, 1000);
         }
+    }
+
+    function drawPlayer() {
+        context.fillStyle = player.color;
+        context.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    function drawEnemies() {
+        enemies.forEach(enemy => {
+            context.drawImage(enemyImage, enemy.x, enemy.y, enemy.width, enemy.height);
+            enemy.y += enemy.speedY;
+            enemy.x += enemy.speedX;
+            if (enemy.y > canvas.height) {
+                enemy.y = 0;
+                enemy.x = Math.random() * canvas.width;
+            }
+            if (enemy.x > canvas.width || enemy.x < 0) {
+                enemy.speedX *= -1;
+            }
+        });
+    }
+
+    function checkCollisions() {
+        enemies.forEach(enemy => {
+            if (player.color === 'lightblue' && 
+                player.x < enemy.x + enemy.width &&
+                player.x + player.width > enemy.x &&
+                player.y < enemy.y + enemy.height &&
+                player.y + player.height > enemy.y) {
+                    alert('你被攻擊了! GAME OVER!');
+                    gameEnded = true;
+                    resetGame();
+            }
+        });
+    }
+
+    function resetGame() {
+        player.x = 50;
+        player.y = canvas.height - 100;
+        gameStarted = false;
+        countdown = 20;
+        canTurnGreen = true;
+        enemies = [];
+        startButton.classList.remove('hidden');
+        canvas.classList.add('hidden');
+        clearInterval(countdownInterval);
+        countdownElement.textContent = `倒計時: 20`;
     }
 });
